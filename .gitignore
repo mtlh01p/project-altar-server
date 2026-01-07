@@ -1,0 +1,4 @@
+backend/.env
+backend/auth/__pycache__/routes.cpython-313.pyc
+backend/auth/__pycache__/__init__.cpython-313.pyc
+backend/supabase_client/__pycache__/__init__.cpython-313.pyc
