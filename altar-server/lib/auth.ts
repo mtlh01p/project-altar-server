@@ -13,8 +13,18 @@ export async function login(email: string, password: string) {
 }
 
 export async function logout() {
-  await fetch("/api/logout", { method: "POST" });
+  const res = await fetch("/api/logout", {
+    method: "POST",
+  });
+
+  if (!res.ok) {
+    throw new Error("Logout failed");
+  }
+
+  // client-side cleanup
+  localStorage.removeItem("access_token");
 }
+
 
 export async function register(
   name: string,
@@ -31,4 +41,16 @@ export async function register(
     throw new Error("Registration failed");
   }
     return res.json();
+}
+
+export async function getCurrentUser() {
+  const res = await fetch("/api/current_user", {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) {
+    throw new Error("Failed to fetch current user");
+  }
+
+  return res.json();
 }

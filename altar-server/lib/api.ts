@@ -2,7 +2,7 @@ export async function apiFetch(
   path: string,
   options: RequestInit = {}
 ) {
-  const baseUrl = process.env.FLASK_API_URL;
+  const baseUrl = process.env.NEXT_PUBLIC_FLASK_API_URL || process.env.FLASK_API_URL;
 
   if (!baseUrl) {
     throw new Error("FLASK_API_URL not defined");
