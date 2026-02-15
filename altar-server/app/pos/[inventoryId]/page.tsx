@@ -20,10 +20,18 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useParams } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Search, ShoppingCart } from "lucide-react"
+import { Plus, Search, ShoppingBag } from "lucide-react"
 import { getProductsByInventory } from "@/lib/products"
 import { Product } from "@/lib/types"
-import { Suspense } from "react" // Added Suspense
+import { Suspense } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 export default function CheckoutPage() {
   const params = useParams()
@@ -36,11 +44,17 @@ export default function CheckoutPage() {
   const [selectedCategory, setSelectedCategory] = React.useState("All")
   const [activeCartId, setActiveCartId] = React.useState<string | null>(null)
 
+  // New state for Add-to-Cart dialog
+  const [cartDialogOpen, setCartDialogOpen] = React.useState(false)
+  const [carts, setCarts] = React.useState<any[]>([])
+  const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null)
+
   React.useEffect(() => {
     const stored = localStorage.getItem("activeCartId")
     if (stored) setActiveCartId(stored)
   }, [])
-    const cartItemCount = cartCount // You can replace this with actual cart item count logic
+
+  const cartItemCount = cartCount // UI badge
 
   // FETCH REAL PRODUCTS
   React.useEffect(() => {
@@ -59,31 +73,50 @@ export default function CheckoutPage() {
     if (inventoryId) loadProducts()
   }, [inventoryId])
 
-const addToCart = async (product: Product) => {
-  if (!activeCartId) {
-    alert("No active cart selected")
-    return
+  // Load carts for the dialog
+  const loadCarts = async () => {
+    try {
+      const res = await fetch("/api/cart", { headers: { "Content-Type": "application/json" } })
+      if (!res.ok) throw new Error("Failed to fetch carts")
+      const data = await res.json()
+      setCarts(data.carts || data)
+    } catch (err) {
+      console.error("Failed to load carts", err)
+    }
   }
 
-  try {
-    await fetch("/api/cart-items", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        cartId: activeCartId,
-        productId: product.productId,
-      }),
-    })
-  } catch (err) {
-    console.error("Failed to add to cart", err)
+  // Open Add-to-Cart dialog
+  const handleAddClick = (product: Product) => {
+    setSelectedProduct(product)
+    setCartDialogOpen(true)
+    loadCarts()
   }
-}
 
+  const addToCart = async (cartId: string, product: Product) => {
+    try {
+      const res = await fetch(`/api/cart/${cartId}/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.productId, quantity: 1 }),
+      })
+      if (!res.ok) {
+        const errorData = await res.json()
+        alert(errorData.error || "Failed to add item")
+        return
+      }
+
+      setCartCount((prev) => prev + 1)
+      setCartDialogOpen(false)
+      setSelectedProduct(null)
+    } catch (err) {
+      console.error("Failed to add to cart", err)
+      alert("Failed to add item to cart")
+    }
+  }
 
   const filteredProducts = items.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase())
-    // Ensure category exists in your DB or default to 'All'
-    const matchesCategory = selectedCategory === "All" || product.name === selectedCategory // To be edited later
+    const matchesCategory = selectedCategory === "All" || product.name === selectedCategory
     return matchesSearch && matchesCategory
   })
 
@@ -125,17 +158,14 @@ const addToCart = async (product: Product) => {
                 size="sm"
                 className="relative bg-transparent h-8 md:h-10 px-2 md:px-4"
                 onClick={() => {
-                  if (!activeCartId) {
-                    router.push("/pos/carts") // choose or create cart first
-                  } else {
-                    router.push(`/pos/cart/${activeCartId}`)
-                  }
+                  if (!activeCartId) router.push("/pos/carts")
+                  else router.push(`/pos/cart/${activeCartId}`)
                 }}
               >
-                <ShoppingCart className="h-4 w-4" />
+                <ShoppingBag className="h-4 w-4" />
                 {cartItemCount > 0 && (
                   <Badge className="absolute -top-1 -right-1 h-4 w-4 md:h-5 md:w-5 rounded-full p-0 flex items-center justify-center text-[10px] md:text-xs">
-                    {cartItemCount}
+                    🔼
                   </Badge>
                 )}
               </Button>
@@ -144,7 +174,7 @@ const addToCart = async (product: Product) => {
 
           <div className="flex flex-1 flex-col overflow-hidden p-4">
             <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="h-full flex flex-col">
-              <div className="mb-4 flex items-center justify-between">
+              {/*<div className="mb-4 flex items-center justify-between">
                 <TabsList className="bg-muted/50 border">
                   <TabsTrigger value="All">All Items</TabsTrigger>
                   <TabsTrigger value="Coffee">Coffee</TabsTrigger>
@@ -153,57 +183,88 @@ const addToCart = async (product: Product) => {
                   <TabsTrigger value="Food">Food</TabsTrigger>
                   <TabsTrigger value="Beverages">Beverages</TabsTrigger>
                 </TabsList>
-              </div>
+              </div>*/}
 
               <ScrollArea className="flex-1">
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 pb-4">
-                {/* Replace your .map content with this */}
-                {loading ? (
-                  <div className="col-span-full py-20 text-center">Loading items...</div>
-                ) : filteredProducts.map((product) => (
-                  <Card
-                    key={product.productId}
-                    className="group flex flex-col overflow-hidden transition-all hover:shadow-md"
-                  >
-                    <div className="relative aspect-square">
-                      <img
-                        src={product.image || "/placeholder.svg"}
-                        alt={product.name}
-                        className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                      />
-                      <div className="absolute top-2 right-2">
-                        <Badge
-                          variant={product.stock < 10 ? "destructive" : "secondary"}
-                          className="bg-background/80 backdrop-blur-sm"
-                        >
-                          {product.stock} in stock
-                        </Badge>
+                  {loading ? (
+                    <div className="col-span-full py-20 text-center">Loading items...</div>
+                  ) : filteredProducts.map((product) => (
+                    <Card
+                      key={product.productId}
+                      className="group flex flex-col overflow-hidden transition-all hover:shadow-md"
+                    >
+                      <div className="relative aspect-square">
+                        <img
+                          src={product.image || "/placeholder.svg"}
+                          alt={product.name}
+                          className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                        />
+                        <div className="absolute top-2 right-2">
+                          <Badge
+                            variant={product.stock < 10 ? "destructive" : "secondary"}
+                            className="bg-background/80 backdrop-blur-sm"
+                          >
+                            {product.stock} in stock
+                          </Badge>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <CardHeader className="p-3 pb-0">
-                      <CardTitle className="text-sm line-clamp-1">{product.name}</CardTitle>
-                      <div className="text-primary font-bold text-lg">
-                        ${product.price.toFixed(2)}
-                      </div>
-                    </CardHeader>
+                      
+                      <CardHeader className="p-3 pb-0">
+                        <CardTitle className="text-sm line-clamp-1">{product.name}</CardTitle>
+                        <div className="text-primary font-bold text-lg">
+                          ${product.price.toFixed(2)}
+                        </div>
+                      </CardHeader>
 
-                    <div className="p-3 pt-2 mt-auto">
-                      <Button 
-                        className="w-full gap-2" 
-                        size="sm"
-                        onClick={() => addToCart(product)}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add to Cart
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
+                      <div className="p-3 pt-2 mt-auto">
+                        <Button
+                          className="w-full gap-2"
+                          size="sm"
+                          onClick={() => handleAddClick(product)}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add to Cart
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
                 </div>
               </ScrollArea>
             </Tabs>
           </div>
+
+          {/* --- ADD TO CART DIALOG --- */}
+          <Dialog open={cartDialogOpen} onOpenChange={setCartDialogOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Select a Cart</DialogTitle>
+                <DialogDescription>
+                  Choose which cart to add <strong>{selectedProduct?.name}</strong> to.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="flex flex-col gap-2 py-2">
+                {carts.length === 0 ? (
+                  <p>No carts found. Create one first in <strong>Checkout → Carts</strong>.</p>
+                ) : (
+                  carts.map((cart) => (
+                    <Button
+                      key={cart.cartId}
+                      variant="outline"
+                      onClick={() => selectedProduct && addToCart(cart.cartId, selectedProduct)}
+                    >
+                      {cart.name || `${cart.cartName}`}
+                    </Button>
+                  ))
+                )}
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setCartDialogOpen(false)}>Cancel</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </SidebarInset>
       </SidebarProvider>
     </Suspense>

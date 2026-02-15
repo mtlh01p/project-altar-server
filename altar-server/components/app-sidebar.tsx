@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, ShoppingCart, Package, Users, BarChart3, Settings, Store, LogOut, ChevronUp } from "lucide-react"
+import { LayoutDashboard, ShoppingCart, Package, Users, BarChart3, Settings, Store, LogOut, ChevronUp, ShoppingBag } from "lucide-react"
 
 import {
   Sidebar,
@@ -36,8 +36,13 @@ const navMain = [
     icon: Package,
   },
   {
-    title: "Reports",
-    url: "/reports",
+    title: "Carts",
+    url: "/pos/carts",
+    icon: ShoppingBag,
+  },
+  {
+    title: "Transactions",
+    url: "/transactions",
     icon: BarChart3,
   },
 ]
@@ -58,9 +63,14 @@ const pathname = usePathname()
     async function fetchUser() {
       try {
         const res = await fetch("/api/auth/me")
-        if (res.ok) {
-          const data = await res.json()
-          setUser(data.user) // Assumes Flask returns { user: { name, email... } }
+        const data = await res.json()
+        console.log("Auth response:", data)
+        
+        if (res.ok && data.user) {
+          console.log("Setting user:", data.user)
+          setUser(data.user)
+        } else {
+          console.warn("Failed to load user:", data.error)
         }
       } catch (err) {
         console.error("Failed to load user", err)

@@ -1,39 +1,45 @@
 import { NextResponse } from "next/server";
 import { apiFetch } from "@/lib/api";
+import { cookies } from "next/headers";
 
-interface Params {
-  params: { cartId: string };
-}
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ cartId: string }> }
+) {
+  const { cartId } = await context.params; // ✅ FIX
 
-export async function GET(_req: Request, { params }: Params) {
-  const { cartId } = params;
+  const cookieStore = await cookies();
+  const token = cookieStore.get("access_token")?.value || "";
 
-  const res = await apiFetch(`/cart/${cartId}/items`, { method: "GET" });
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => null);
-    return NextResponse.json({ error: "Failed to fetch cart items", details: errorData }, { status: res.status });
-  }
+  const res = await apiFetch(`/api/cart/${cartId}/items`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
 
   const data = await res.json();
-  return NextResponse.json(data);
+  return NextResponse.json(data, { status: res.status });
 }
 
-export async function POST(req: Request, { params }: Params) {
-  const { cartId } = params;
+
+export async function POST(
+  req: Request,
+  context: { params: Promise<{ cartId: string }> }
+) {
+  const { cartId } = await context.params; // ✅ FIX
   const body = await req.json();
 
-  const res = await apiFetch(`/cart/${cartId}/items`, {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("access_token")?.value || "";
+
+  const res = await apiFetch(`/api/cart/${cartId}/items`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify(body),
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => null);
-    return NextResponse.json({ error: "Failed to add item", details: errorData }, { status: res.status });
-  }
-
   const data = await res.json();
-  return NextResponse.json(data);
+  return NextResponse.json(data, { status: res.status });
 }

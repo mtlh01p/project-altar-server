@@ -1,41 +1,46 @@
-import { apiFetch } from "./api";
+import { Cart, CartItem } from "./types";
 
+// Get current carts
 export async function getCarts() {
-  const res = await apiFetch("/api/cart", { method: "GET" });
+  const res = await fetch("/api/cart", { method: "GET", headers: { "Content-Type": "application/json" }, });
   if (!res.ok) throw new Error("Failed to fetch carts");
-  return res.json();
+  const data = await res.json();
+  return data.cart ?? [];
 }
 
-export async function createCart(userId?: string) {
-  const res = await apiFetch("/api/cart", {
+// Create a new cart
+export async function createCart(payload: {
+  cartName: string;
+  ownerUserId: string;
+}): Promise<Cart> {
+  const res = await fetch("/api/cart", {
     method: "POST",
-    body: JSON.stringify({ userId }),
-    credentials: "include",
     headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error("Failed to create cart");
+  if (!res.ok) {
+    const errData = await res.json();
+    throw new Error(errData.error || "Failed to create cart");
+  }
   return res.json();
 }
 
-export async function addItemToCart(cartId: number, productId: string, quantity = 1) {
-  const res = await apiFetch(`/api/cart/${cartId}/items`, {
+
+export async function fetchCartItems(cartId: string) {
+  const res = await fetch(`/api/cart/${cartId}/items`);
+  return res.json();
+}
+
+export async function addCartItem(cartId: string, productId: string) {
+  await fetch(`/api/cart/${cartId}/items`, {
     method: "POST",
-    body: JSON.stringify({ productId, quantity }),
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
+    body: JSON.stringify({ productId }),
   });
-  if (!res.ok) throw new Error("Failed to add item to cart");
-  return res.json();
-}
-
-export async function getCartItems(cartId: number) {
-  const res = await apiFetch(`/api/cart/${cartId}/items`, { method: "GET" });
-  if (!res.ok) throw new Error("Failed to fetch cart items");
-  return res.json();
 }
 
 export async function removeCartItem(itemId: number) {
-  const res = await apiFetch(`/api/cart/items/${itemId}`, { method: "DELETE" });
-  if (!res.ok) throw new Error("Failed to remove cart item");
-  return res.json();
+  await fetch(`/api/cart/items/${itemId}`, {
+    method: "DELETE",
+  });
 }

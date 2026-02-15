@@ -69,29 +69,6 @@ def update_product(product_id):
 
     return jsonify({"message": "Update successful", "data": res.data[0]}), 200
 
-    data = request.json
-
-    update_data = {}
-    if "name" in data:
-        update_data["name"] = data["name"]
-    if "description" in data:
-        update_data["description"] = data["description"]
-    if "price" in data:
-        update_data["price"] = data["price"]
-    if "stock" in data:
-        update_data["stock"] = data["stock"]
-
-    if not update_data:
-        return jsonify({"error": "No valid fields provided"}), 400
-
-    # 🔥 FIX IS HERE — use "id" instead of "productId"
-    res = update_record("product", "productId", product_id, update_data)
-
-    if not res.data:
-        return jsonify({"error": "Product not found"}), 404
-
-    return jsonify({"message": "Update successful", "data": res.data}), 200
-
 @products_bp.route("/<product_id>", methods=["DELETE"])
 def delete_product(product_id):
     res = delete_record("product", "productId", product_id)

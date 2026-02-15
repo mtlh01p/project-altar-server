@@ -44,13 +44,12 @@ export async function register(
 }
 
 export async function getCurrentUser() {
-  const res = await fetch("/api/current_user", {
+  const res = await fetch("/api/auth/me", {
     method: "GET",
     headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) {
     throw new Error("Failed to fetch current user");
   }
-
   return res.json();
 }

@@ -33,3 +33,12 @@ export interface Inventory {
   created_at: string;
   description?: string;
 }
+
+export type Transaction = {
+  transactionId: number;
+  productIds: string[];
+  total: number;
+  userId?: string;
+  inventoryId?: string;
+  created_at: string;
+}
